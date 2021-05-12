@@ -1,0 +1,46 @@
+FROM ubuntu:focal
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=america/los_angeles
+
+# install packages
+RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
+    apt-get install --no-install-recommends -q -y \
+    build-essential \
+    ccache \
+    clang-format-7 \
+    clang-tidy \
+    clinfo \
+    cmake \
+    curl \
+    git \
+    libboost-all-dev \
+    libpapi-dev \
+    libpng-dev \
+    libva-dev \
+    ninja-build \
+    ocl-icd-opencl-dev \
+    opencl-headers
+
+WORKDIR /build
+RUN mkdir -p build/src
+
+
+# Install level-zero and Intel level-zero GPU drivers from Agama 
+#-----------------------
+RUN apt-get update -y && apt-get install -y --no-install-recommends software-properties-common ca-certificates gnupg wget && \
+    wget -qO - https://repositories.intel.com/graphics/intel-graphics.key | apt-key add - && \
+    add-apt-repository "deb [arch=amd64] https://repositories.intel.com/graphics/ubuntu focal main" && \
+    apt-get update && \
+    apt-get install -y intel-opencl-icd level-zero intel-level-zero-gpu level-zero-dev
+
+
+# Build level-zero-tests
+RUN git clone https://github.com/oneapi-src/level-zero-tests && \
+    cd level-zero-tests && \
+    git submodule update --init --recursive && \
+    mkdir build && \
+    cd build && \
+    cmake .. && \
+    cmake --build . --config Release --target install -j $(nproc)
+
